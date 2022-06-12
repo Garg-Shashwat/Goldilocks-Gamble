@@ -18,6 +18,8 @@ size = {1:"Dwarf", 2:"Terrestial", 3:"Super-Earth"} #large is good
 distance = {2:"Cytherean", 3:"Gaian", 1:"Martian"} #ideal is good
 mass = {1:"Sub-Earth", 2:"Mid-Earth", 3:"Midplanet"} 
 
+data=pd.read_csv('data.csv')
+
 d_era = {
     1:"Ancient",
     2:"Medieval",
@@ -98,17 +100,16 @@ initial_values={
 @client.command()
 async def start(ctx):
     if ctx.channel.id == dev_channel:
-        
         a_cont=await client.get_context(await client.get_channel(announcement).get_partial_message(client.get_channel(announcement).last_message_id).fetch())
 
-        if os.path.isfile('data.csv'):
+        if os.path.isfile('data.csv'):      #make the file alag se
             os.remove('data.csv')
         with open('data.csv','a') as data_file:
-            data_file.write(',name,'+','.join(initial_values.keys()))
+            data_file.write('id,name,'+','.join(initial_values.keys()))
             for ch in a_cont.channel.category.text_channels:
                 if ch!=a_cont.channel:
                     data_file.write('\n'+str(ch.id)+','+str(ch.name))
-        df=pd.read_csv('data.csv',index_col=0).copy(deep=True)
+        df=pd.read_csv('data.csv')
         teams = len(df)
         message=""
         for line in open('./start_message.txt',encoding='utf8'):
@@ -164,9 +165,6 @@ async def the_end(ctx):
 
 async def new_era(ctx, era):
     await ctx.send("Congratulations! Your civilization has progressed to " + d_era[era] + " era.")
-    df=pd.read_csv('data.csv',index_col=0)
-    asked = df.loc[ctx.channel.id,'asked']
-
     await ctx.send("You have uncovered a memory Cache.")
     time.sleep(waittime)
     message=""
@@ -181,69 +179,12 @@ async def new_era(ctx, era):
     time.sleep(waittime)
     #else:
     if era==6:
-        '''asked = 1
-        if df.loc[id,'story'] == 2:
-            time.sleep(waittime)
-            message=""
-            for line in open('./story'+str(era-1)+'1.txt',encoding='utf8'):
-                message = message + line
-            await ctx.send(message)
-            time.sleep(waittime)
-            message=""
-            for line in open('./story'+str(era-1)+'2.txt',encoding='utf8'):
-                message = message + line
-            await ctx.send(message)'''
         message=""
         for line in open('./poem.txt',encoding='utf8'):
             message = message + line
         await ctx.send(message)
         await the_end(ctx)
-    #df.loc[ctx.channel.id,'asked']=asked
-    df.to_csv("data.csv")
 
-'''@client.command()
-async def story(ctx, answer):
-    df=pd.read_csv('data.csv',index_col=0)
-    asked = df.loc[ctx.channel.id,'asked']
-    if int(asked) == 1:
-        id = ctx.channel.id
-        era = int(df.loc[id,'era'])+1
-        if era > 5 :
-            if answer == 'y' and df.loc[id,'story'] == 2:
-                message=""
-                for line in open('./story'+str(era-1)+'1.txt',encoding='utf8'):
-                    message = message + line
-                await ctx.send(message)
-                message=""
-                time.sleep(waittime)
-                for line in open('./story'+str(era-1)+'2.txt',encoding='utf8'):
-                    message = message + line
-                await ctx.send(message)
-            else:
-                message=""
-                for line in open('./story'+str(era-1)+'1.txt',encoding='utf8'):
-                    message = message + line
-                await ctx.send(message)
-                message=""
-                time.sleep(waittime)
-                for line in open('./story'+str(era-1)+'2.txt',encoding='utf8'):
-                    message = message + line
-                await ctx.send(message)
-        elif answer == 'y':
-            df.loc[id,'story'] = df.loc[id,'story'] + 1
-            time.sleep(waittime)
-            message=""
-            for line in open('./story'+str(era-1)+'1.txt',encoding='utf8'):
-                message = message + line
-            await ctx.send(message)
-            message=""
-            time.sleep(waittime)
-            for line in open('./story'+str(era-1)+'2.txt',encoding='utf8'):
-                message = message + line
-            await ctx.send(message)
-            time.sleep(waittime)
-        df.loc[ctx.channel.id,'asked']=0
-        df.to_csv("data.csv")'''
 
 @client.command()
 async def buy(ctx,resource,quantity=1):
@@ -261,41 +202,40 @@ def buy_resource(id,resource,quantity):
     cred=0
     exhaust=0
     rf = pd.read_csv('mapping.csv')
-    df=pd.read_csv('data.csv',index_col=0)
-    era=int(df.loc[id,'era'])
+    df=data.loc[data['id']== id]
+    era=df['era']
     resf=pd.read_csv('resources.csv',index_col=0)
     if resource in resf.index and resf.loc[resource,str(era)]>0:
         cred=resf.loc[resource,'6']
-        updated_creds=df.loc[id,'credits']-int(quantity)*cred*df.loc[id,'mult']
+        updated_creds=df['credits']-int(quantity)*cred*df['mult']
         if updated_creds<0:
             exhaust=1
         else:
-            df.loc[id,'credch']=int(df.loc[id,'credch']+updated_creds-df.loc[id,'credits'])
-            df.loc[id,'credits']=updated_creds
+            df['credch']=int(df['credch']+updated_creds-df['credits'])
+            df['credits']=updated_creds
             if resource.lower() == 'seeds':
-                seed = int(5*int(df.loc[id,'population'])/100 + float(df.loc[id,'si'])*5)
-                df.loc[id,'population']=int(df.loc[id,'population']+int(quantity)*seed)
-                df.loc[id,'change']=df.loc[id,'change']+int(quantity)*seed
+                seed = int(5*int(df['population'])/100 + float(df['si'])*5)
+                df['population']=int(df['population']+int(quantity)*seed)
+                df['change']=df['change']+int(quantity)*seed
             else:
-                df.loc[id,str(resource)]=df.loc[id,str(resource)]+int(quantity)
+                df[resource]+=int(quantity)
                 di_i = int(quantity)*resf.loc[resource,str(era)]
-                df.loc[id,'di']=df.loc[id,'di']+round(di_i,2)
-                df.loc[id,'iqch']=round(df.loc[id,'iqch']+initial_values['iq'] + 241/(1+math.exp(-0.02*(df.loc[id,'di']-150)))-df.loc[id,'iq'],2)
-                df.loc[id,'iq']=round(241/(1+math.exp(-0.02*(df.loc[id,'di']-150))),2)
+                df['di']+=round(di_i,2)
+                df['iqch']=round(df['iqch']+initial_values['iq'] + 241/(1+math.exp(-0.02*(df['di']-150)))-df['iq'],2)
+                df['iq']=round(241/(1+math.exp(-0.02*(df['di']-150))),2)
             for index in rf.keys()[1:]:
                 df.loc[id,index]=df.loc[id,index]+int(quantity)*float(rf.loc[rf['f']==resource,index])
     else:
-        return False,exhausts
-        
-    df.to_csv('data.csv')
+        return False,exhaust
+    data.loc[data['id']==id,[data.keys()[1:]]]=df[data.keys()[1:]].to_list()
+    data.to_csv('data.csv')
     return True,exhaust
 
 @client.command()
 async def turn(ctx):
     if ctx.channel.id == dev_channel:
-        df=pd.read_csv('data.csv',index_col=0)
-        teams = len(df)
-        asked = 0
+        
+        teams = len(data)
         turn=0
         with open('parameters.csv','r+') as para_file:
             turn=[row.split(sep=',')[1] for row in para_file]
@@ -304,19 +244,21 @@ async def turn(ctx):
             para_file.close()
         if int(turn[0])%5==0:
             await leaderboard(await client.get_context(await client.get_channel(announcement).get_partial_message(client.get_channel(announcement).last_message_id).fetch()))
-        for i in range(teams):
-            id = [int(x) for x in df.index][i]
-            chan=client.get_channel(int(id))
+        id=df['id'].to_list()
+        for i in id:
+            df=data.loc[data['id']== i]
+            # id = [int(x) for x in df.index][i]
+            chan=client.get_channel(int(i))
             mess=await chan.get_partial_message(chan.last_message_id).fetch()
             cont=await client.get_context(mess)
-            water=df.loc[id,'water']
-            land=df.loc[id,'land']
-            pollute=df.loc[id,'pollute']
-            di=df.loc[id,'di']
-            biomes=df.loc[id,'biomes']
-            size_p=df.loc[id,'size']
-            oxygen=df.loc[id,'oxygen']
-            era=df.loc[id,'era']
+            water=df['water']
+            land=df['land']
+            pollute=df['pollute']
+            di=df['di']
+            biomes=df['biomes']
+            size_p=df['size']
+            oxygen=df['oxygen']
+            era=df['era']
             iq=initial_values['iq'] + 241/(1+math.exp(-0.02*(di-150)))
             if iq>=240:
                 era=6
@@ -328,45 +270,42 @@ async def turn(ctx):
                 era=3
             elif iq>30:
                 era=2
-            if df.loc[id,'era']!=era:
+            if df['era']!=era:
                 await new_era(cont,era)
             
-            df.loc[id,'era']=era
-            population=df.loc[id,'population']
+            df['era']=era
+            population=df['population']
             pdensity=int(iq/10+1)
             si= 0.00004*water*(land**1.3)*(1-pollute/100)*oxygen*(60-oxygen)
             pop_capacity=pdensity*land*int(size_p)*1000
             new_pop=int(population*si*0.03*(1-population/pop_capacity))
-            df.loc[id,'change']=df.loc[id,'change']+new_pop-population
-            df.loc[id,'iq']=iq  
-            df.loc[id,'population']=new_pop
-            df.loc[id,'pdensity']=pdensity
-            df.loc[id,'credch']=int(df.loc[id,'credch']+(si*(1+di)*(1.2**era)))
-            df.loc[id,'credits'] = int(df.loc[id,'credits'] + (si*(1+di)*(1.2**era)))
+            df['change']=df['change']+new_pop-population
+            df['iq']=iq  
+            df['population']=new_pop
+            df['pdensity']=pdensity
+            df['credch']=int(df['credch']+(si*(1+di)*(1.2**era)))
+            df['credits'] = int(df['credits'] + (si*(1+di)*(1.2**era)))
             
             await cont.send(("Turn "+turn[0]+' started!'))
             crisis,death=crisis_for_era(id)
-            df.loc[id,'change']=df.loc[id,'change']-death
+            df['change']-=death
             if crisis!='none':
                 await cont.send('Your civilization is hit by '+crisis_aliases[crisis]+'.\nYou lost '+str(death)+' people.')
             await stats(cont)
-        df.to_csv('data.csv')
+            data.loc[data['id']== i,[data.keys()[1:]]]=df[data.keys()[1:]].to_list()
+        data.to_csv('data.csv')
 
-def crisis_for_era(i):
-    df=pd.read_csv('data.csv',index_col=0)
-    era=df.loc[i,'era']
-    water=df.loc[i,'water']
-    land=df.loc[i,'land']
-    di=df.loc[i,'di']
-    population=df.loc[i,'population']
-    farm=df.loc[i,'farms']
-    biomes=df.loc[i,'biomes']
-    temp=df.loc[i,'temp']
-    oxygen=df.loc[i,'oxygen']
-    co2=df.loc[i,'co2']
-    factory=df.loc[i,'factory']
-    satellite=df.loc[i,'satellite']
-    pollute=df.loc[i,'pollute']
+def crisis_for_era(id):
+    df=data.loc[data['id']== id]
+    era=df['era']
+    water=df['water']
+    population=df['population']
+    farm=df['farms']
+    oxygen=df['oxygen']
+    co2=df['co2']
+    factory=df['factory']
+    satellite=df['satellite']
+    pollute=df['pollute']
     crisis='none'
     cf=pd.read_csv('crisis.csv')
     era_df=cf.loc[cf['era']==era]
@@ -397,86 +336,81 @@ def crisis_for_era(i):
         death = int(int(population)*float(era_df.loc[era_df['crisis']==crisis,'death'])/100)
         population=int(population)-death
         for index in era_df.loc[era_df['crisis']==crisis].keys()[3:]:
-            df.loc[i,str(index)]=locals()[str(index)]*(1-float(era_df.loc[era_df['crisis']==crisis,index])/100)
+            df[index]=locals()[str(index)]*(1-float(era_df.loc[era_df['crisis']==crisis,index])/100)
+        df['population']=population
     if crisis == 'flare':
         satellite = int(satellite*0.8)
+        df['satellite']=satellite
     elif crisis == 'ai':
         factory = int(factory*1.2)
+        df['factory']=factory
     elif crisis ==  'floods' or crisis == 'drought':
         farm = int(farm*0.9)
+        df['farms']=farm
 
-    df.loc[i,'population']=population
-    df.loc[i,'farms']=farm
-    df.loc[i,'factory']=factory
-    df.loc[i,'satellite']=satellite
-    df.to_csv("data.csv")
-    '''df.loc[i,'water']=water
-    df.loc[i,'land']=land
-    df.loc[i,'di']=di
-    df.loc[i,'flora']=flora
-    df.loc[i,'temp']=temp'''
+    data.loc[data['id']==id,[data.keys()[1:]]]=df[data.keys()[1:]].to_list()    
+    data.to_csv("data.csv")
     return crisis,death
 
 @client.command()
 async def stats(ctx):
-    df=pd.read_csv('data.csv',index_col=0)
     id=ctx.channel.id
-    era=int(df.loc[id,'era'])
+    df=data.loc[data['id']== id]
+    era=int(df['era'])
     turn=[row.split(sep=',')[1] for row in open('parameters.csv','r')][0]
     embed=discord.Embed(title='Stats',
-        description = f"Your planet : {str(df.loc[id,'name'])}\n Current Era : { d_era[int(df.loc[id,'era'])]}\n Population : { float(df.loc[id,'population'])} ({'{:+}'.format(df.loc[id,'change'])}) \n Average IQ : { round(df.loc[id,'iq'],2)} ({'{:+}'.format(df.loc[id,'iqch'])})\n Credits : {round(float(df.loc[id,'credits']),2)} ({'{:+}'.format(df.loc[id,'credch'])})\n"
+        description = f"Your planet : {str(df['name'])}\n Current Era : { d_era[int(df['era'])]}\n Population : { float(df['population'])} ({'{:+}'.format(df['change'])}) \n Average IQ : { round(df['iq'],2)} ({'{:+}'.format(df['iqch'])})\n Credits : {round(float(df['credits']),2)} ({'{:+}'.format(df['credch'])})\n"
                       f"-----------------------------------------------\n"
                       f"Resources\n"
                       f"-----------------------------------------------\n"
         ,color=discord.Colour.blue()
     )
-    df.loc[id,'change']=0
-    df.loc[id,'credch']=0
-    df.loc[id,'iqch']=0
-    for i in list(df.loc[id].keys())[list(df.columns).index('oxygen'):]:
-        if float(df.loc[id,i])>0:    
-            embed.add_field(name=res_aliases[i], value=round(float(df.loc[id,i]),2), inline=True)
-    embed.set_footer(text=f"Type : {str(size[df.loc[id,'size']])}\t\t\t\t\t\tTurn : {str(int(turn)-1)}\nOrbit Size : {str(distance[df.loc[id,'distance']])}\nMass : {str(mass[df.loc[id,'mass']])}")
+    df['change']=0      #why??
+    df['credch']=0
+    df['iqch']=0
+    for i in df.columns.to_list()[df.columns.to_list().index('oxygen'):]:        #traverse the dataframe from oxygen till the end
+        embed.add_field(name=res_aliases[i], value=round(float(df[i]),2), inline=True)
+    embed.set_footer(text=f"Type : {str(size[df['size']])}\t\t\t\t\t\tTurn : {str(int(turn)-1)}\nOrbit Size : {str(distance[df['distance']])}\nMass : {str(mass[df['mass']])}")
     await ctx.send(embed=embed)
-    df.to_csv('data.csv')
+    data.loc[data['id']==id,[data.keys()[1:]]]=df[data.keys()[1:]].to_list()  
+    data.to_csv('data.csv')
     await buy_list(ctx, era)
 
 async def buy_list(ctx, era):
-    df=pd.read_csv('data.csv',index_col=0)
+    mult=float(data.loc[data['id']==ctx.channel.id,'mult'])
     res_file=pd.read_csv('resources.csv',index_col=0)
     embed = discord.Embed(title="Resource Buy List",color=discord.Colour.red(), description='Resources available')
     for i in res_file.index:
         if float(res_file.loc[i,str(era)]):
-            embed.add_field(name=i+' : '+str(float(res_file.loc[i,'6'])*float(df.loc[int(ctx.channel.id),'mult']))+" credits", value='Buy 1 '+res_aliases[i] ,inline=False)
+            embed.add_field(name=i+' : '+str(float(res_file.loc[i,'6'])*mult)+" credits", value='Buy 1 '+res_aliases[i] ,inline=False)
     await ctx.send(embed=embed)
 
 @client.command()
 async def leaderboard(ctx):
-    df=pd.read_csv('data.csv',index_col=0)
-    teams = len(df)
+    teams = len(data)
     embed=discord.Embed(title='Leaderboard',description='------------------------------------------------------',color=discord.Color.gold())
-    name=[]
-    era=[]
-    score=[]
+    # name=[]
+    # era=[]
+    # score=[]
     sorted_df=pd.DataFrame(columns=['name','era','score'],index=range(teams))
-    sorted_df=sorted_df.head()
     for i in range(teams):
-        sorted_df.loc[i,'name']=df.iloc[i,list(df.columns).index('name')]
-        sorted_df.loc[i,'era']=d_era[df.iloc[i,list(df.columns).index('era')]]
-        sorted_df.loc[i,'score']=round(df.iloc[i,list(df.columns).index('si')]*df.iloc[i,list(df.columns).index('di')],2)
-        '''name.append(df.iloc[i,0])
-        era.append(d_era[df.iloc[i,1]])
-        score.append()'''
+        sorted_df.loc[i,'name']=data.iloc[i,list(data.columns).index('name')]
+        sorted_df.loc[i,'era']=d_era[data.iloc[i,list(data.columns).index('era')]]
+        sorted_df.loc[i,'score']=str(round(data.iloc[i,list(data.columns).index('si')]*data.iloc[i,list(data.columns).index('di')],2)) #needed in string to display in discord
+
     
     sorted_df.sort_values(by='score',ascending=False,inplace=True)
-    for i in range(teams):
-        name.append(sorted_df.iloc[i,0])
-        era.append(sorted_df.iloc[i,1])
-        score.append(sorted_df.iloc[i,2])
+    name=sorted_df.name.to_list()
+    era=sorted_df.era.to_list()
+    score=sorted_df.score.to_list()
+    # for i in range(teams):
+    #     name.append(sorted_df.iloc[i,0])
+    #     era.append(sorted_df.iloc[i,1])
+    #     score.append(sorted_df.iloc[i,2])
 
     embed.add_field(name='Team', value="\n".join(name), inline=True)
     embed.add_field(name='Era', value="\n".join(era), inline=True)
-    embed.add_field(name='Score', value="\n".join(str(sc) for sc in score), inline=True)
+    embed.add_field(name='Score', value="\n".join(score), inline=True)
     await ctx.send(embed=embed)
 
 @client.command()
